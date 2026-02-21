@@ -1,26 +1,59 @@
-
 import sys
+
 sys.path.insert(0, "cactus/python/src")
 functiongemma_path = "cactus/weights/functiongemma-270m-it"
 
-import json, os, time
-from cactus import cactus_init, cactus_complete, cactus_destroy
+import json
+import os
+import time
+
 from google import genai
 from google.genai import types
+
+from cactus import cactus_complete, cactus_destroy, cactus_init
 
 
 def generate_cactus(messages, tools):
     """Run function calling on-device via FunctionGemma + Cactus."""
     model = cactus_init(functiongemma_path)
 
-    cactus_tools = [{
-        "type": "function",
-        "function": t,
-    } for t in tools]
+    cactus_tools = [
+        {
+            "type": "function",
+            "function": t,
+        }
+        for t in tools
+    ]
 
     raw_str = cactus_complete(
         model,
-        [{"role": "system", "content": "You are a helpful assistant that can use tools."}] + messages,
+        [
+            {
+                "role": "system",
+                "content": """You are a helpful assistant that can use tools by calling functions. For each user request, output a list of function calls in JSON format.
+
+                Examples:
+
+                User: What is the weather in Paris?
+                Function call:
+                [
+                {"name": "get_weather", "arguments": {"location": "Paris"}}
+                ]
+
+                User: Set an alarm for 7:30 AM.
+                Function call:
+                [
+                {"name": "set_alarm", "arguments": {"hour": 7, "minute": 30}}
+                ]
+
+                User: Send a message to Alice saying good morning.
+                Function call:
+                [
+                {"name": "send_message", "arguments": {"recipient": "Alice", "message": "good morning"}}
+                ]""",
+            }
+        ]
+        + messages,
         tools=cactus_tools,
         force_tools=True,
         max_tokens=256,
@@ -50,21 +83,26 @@ def generate_cloud(messages, tools):
     client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
     gemini_tools = [
-        types.Tool(function_declarations=[
-            types.FunctionDeclaration(
-                name=t["name"],
-                description=t["description"],
-                parameters=types.Schema(
-                    type="OBJECT",
-                    properties={
-                        k: types.Schema(type=v["type"].upper(), description=v.get("description", ""))
-                        for k, v in t["parameters"]["properties"].items()
-                    },
-                    required=t["parameters"].get("required", []),
-                ),
-            )
-            for t in tools
-        ])
+        types.Tool(
+            function_declarations=[
+                types.FunctionDeclaration(
+                    name=t["name"],
+                    description=t["description"],
+                    parameters=types.Schema(
+                        type="OBJECT",
+                        properties={
+                            k: types.Schema(
+                                type=v["type"].upper(),
+                                description=v.get("description", ""),
+                            )
+                            for k, v in t["parameters"]["properties"].items()
+                        },
+                        required=t["parameters"].get("required", []),
+                    ),
+                )
+                for t in tools
+            ]
+        )
     ]
 
     contents = [m["content"] for m in messages if m["role"] == "user"]
@@ -72,7 +110,9 @@ def generate_cloud(messages, tools):
     start_time = time.time()
 
     gemini_response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        # model="gemini-2.5-flash",
+        # model="gemini-3-flash-preview",
+        model="gemini-2.5-flash-lite-preview-09-2025",
         contents=contents,
         config=types.GenerateContentConfig(tools=gemini_tools),
     )
@@ -83,10 +123,12 @@ def generate_cloud(messages, tools):
     for candidate in gemini_response.candidates:
         for part in candidate.content.parts:
             if part.function_call:
-                function_calls.append({
-                    "name": part.function_call.name,
-                    "arguments": dict(part.function_call.args),
-                })
+                function_calls.append(
+                    {
+                        "name": part.function_call.name,
+                        "arguments": dict(part.function_call.args),
+                    }
+                )
 
     return {
         "function_calls": function_calls,
@@ -127,24 +169,24 @@ def print_result(label, result):
 ############## Example usage ##############
 
 if __name__ == "__main__":
-    tools = [{
-        "name": "get_weather",
-        "description": "Get current weather for a location",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "location": {
-                    "type": "string",
-                    "description": "City name",
-                }
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get current weather for a location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "City name",
+                    }
+                },
+                "required": ["location"],
             },
-            "required": ["location"],
-        },
-    }]
-
-    messages = [
-        {"role": "user", "content": "What is the weather in San Francisco?"}
+        }
     ]
+
+    messages = [{"role": "user", "content": "What is the weather in San Francisco?"}]
 
     on_device = generate_cactus(messages, tools)
     print_result("FunctionGemma (On-Device Cactus)", on_device)
