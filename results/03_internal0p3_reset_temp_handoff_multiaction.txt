@@ -1,0 +1,76 @@
+[1/30] Running: weather_sf (easy)... F1=1.00 | 732ms | on-device, confidence=1.0
+[2/30] Running: alarm_10am (easy)... F1=0.00 | 805ms | on-device, confidence=0.9994
+[3/30] Running: message_alice (easy)... F1=1.00 | 851ms | on-device, confidence=1.0
+[4/30] Running: weather_london (easy)... F1=1.00 | 690ms | on-device, confidence=1.0
+[5/30] Running: alarm_6am (easy)... F1=1.00 | 1733ms | cloud (fallback: local validation), confidence=0.9757
+[6/30] Running: play_bohemian (easy)... F1=1.00 | 1198ms | cloud (fallback: local validation), confidence=0.9986
+[7/30] Running: timer_5min (easy)... F1=1.00 | 957ms | cloud (fallback: local validation), confidence=0
+[8/30] Running: reminder_meeting (easy)... F1=1.00 | 1519ms | cloud (fallback: local validation), confidence=0.9705
+[9/30] Running: search_bob (easy)... F1=1.00 | 686ms | on-device, confidence=0.9992
+[10/30] Running: weather_paris (easy)... F1=1.00 | 682ms | on-device, confidence=1.0
+[11/30] Running: message_among_three (medium)... F1=1.00 | 727ms | cloud (fallback: local validation), confidence=0
+[12/30] Running: weather_among_two (medium)... F1=1.00 | 762ms | on-device, confidence=1.0
+[13/30] Running: alarm_among_three (medium)... F1=1.00 | 1549ms | cloud (fallback: local validation), confidence=0.9999
+[14/30] Running: music_among_three (medium)... F1=1.00 | 1623ms | cloud (fallback: local validation), confidence=0.9957
+[15/30] Running: reminder_among_four (medium)... F1=1.00 | 697ms | cloud (fallback: local validation), confidence=0
+[16/30] Running: timer_among_three (medium)... F1=1.00 | 1510ms | cloud (fallback: local validation), confidence=1.0
+[17/30] Running: search_among_four (medium)... F1=1.00 | 2247ms | cloud (fallback: local validation), confidence=0.9777
+[18/30] Running: weather_among_four (medium)... F1=1.00 | 820ms | on-device, confidence=1.0
+[19/30] Running: message_among_four (medium)... F1=0.00 | 2233ms | cloud (fallback: local validation), confidence=0.9667
+[20/30] Running: alarm_among_five (medium)... F1=0.00 | 935ms | on-device, confidence=1.0
+[21/30] Running: message_and_weather (hard)... F1=1.00 | 785ms | cloud (multi-action heuristic), confidence=0.0
+[22/30] Running: alarm_and_weather (hard)... F1=1.00 | 623ms | cloud (multi-action heuristic), confidence=0.0
+[23/30] Running: timer_and_music (hard)... F1=1.00 | 700ms | cloud (multi-action heuristic), confidence=0.0
+[24/30] Running: reminder_and_message (hard)... F1=1.00 | 748ms | cloud (fallback: local validation), confidence=0
+[25/30] Running: search_and_message (hard)... F1=1.00 | 726ms | cloud (multi-action heuristic), confidence=0.0
+[26/30] Running: alarm_and_reminder (hard)... F1=1.00 | 824ms | cloud (multi-action heuristic), confidence=0.0
+[27/30] Running: weather_and_music (hard)... F1=1.00 | 935ms | cloud (multi-action heuristic), confidence=0.0
+[28/30] Running: message_weather_alarm (hard)... F1=0.67 | 826ms | cloud (multi-action heuristic), confidence=0.0
+[29/30] Running: timer_music_reminder (hard)... F1=1.00 | 515ms | cloud (multi-action heuristic), confidence=0.0
+[30/30] Running: search_message_weather (hard)... F1=1.00 | 755ms | cloud (multi-action heuristic), confidence=0.0
+
+=== Benchmark Results ===
+
+   # | Difficulty | Name                         |  Time (ms) |    F1 | Source | Confidence
+  ---+------------+------------------------------+------------+-------+---------------------
+   1 | easy       | weather_sf                   |     731.69 |  1.00 | on-device | 0.0
+   2 | easy       | alarm_10am                   |     805.01 |  0.00 | on-device | 0.0
+   3 | easy       | message_alice                |     850.91 |  1.00 | on-device | 0.0
+   4 | easy       | weather_london               |     689.88 |  1.00 | on-device | 0.0
+   5 | easy       | alarm_6am                    |    1733.46 |  1.00 | cloud (fallback: local validation) | 0.0
+   6 | easy       | play_bohemian                |    1197.90 |  1.00 | cloud (fallback: local validation) | 0.0
+   7 | easy       | timer_5min                   |     956.79 |  1.00 | cloud (fallback: local validation) | 0.0
+   8 | easy       | reminder_meeting             |    1519.20 |  1.00 | cloud (fallback: local validation) | 0.0
+   9 | easy       | search_bob                   |     685.72 |  1.00 | on-device | 0.0
+  10 | easy       | weather_paris                |     681.81 |  1.00 | on-device | 0.0
+  11 | medium     | message_among_three          |     727.09 |  1.00 | cloud (fallback: local validation) | 0.0
+  12 | medium     | weather_among_two            |     761.63 |  1.00 | on-device | 0.0
+  13 | medium     | alarm_among_three            |    1549.24 |  1.00 | cloud (fallback: local validation) | 0.0
+  14 | medium     | music_among_three            |    1622.81 |  1.00 | cloud (fallback: local validation) | 0.0
+  15 | medium     | reminder_among_four          |     697.32 |  1.00 | cloud (fallback: local validation) | 0.0
+  16 | medium     | timer_among_three            |    1510.10 |  1.00 | cloud (fallback: local validation) | 0.0
+  17 | medium     | search_among_four            |    2246.69 |  1.00 | cloud (fallback: local validation) | 0.0
+  18 | medium     | weather_among_four           |     820.20 |  1.00 | on-device | 0.0
+  19 | medium     | message_among_four           |    2233.46 |  0.00 | cloud (fallback: local validation) | 0.0
+  20 | medium     | alarm_among_five             |     935.30 |  0.00 | on-device | 0.0
+  21 | hard       | message_and_weather          |     784.65 |  1.00 | cloud (multi-action heuristic) | 0.0
+  22 | hard       | alarm_and_weather            |     623.50 |  1.00 | cloud (multi-action heuristic) | 0.0
+  23 | hard       | timer_and_music              |     699.54 |  1.00 | cloud (multi-action heuristic) | 0.0
+  24 | hard       | reminder_and_message         |     748.31 |  1.00 | cloud (fallback: local validation) | 0.0
+  25 | hard       | search_and_message           |     726.07 |  1.00 | cloud (multi-action heuristic) | 0.0
+  26 | hard       | alarm_and_reminder           |     823.83 |  1.00 | cloud (multi-action heuristic) | 0.0
+  27 | hard       | weather_and_music            |     935.47 |  1.00 | cloud (multi-action heuristic) | 0.0
+  28 | hard       | message_weather_alarm        |     826.29 |  0.67 | cloud (multi-action heuristic) | 0.0
+  29 | hard       | timer_music_reminder         |     514.65 |  1.00 | cloud (multi-action heuristic) | 0.0
+  30 | hard       | search_message_weather       |     755.32 |  1.00 | cloud (multi-action heuristic) | 0.0
+
+--- Summary ---
+  easy     avg F1=0.90  avg time=985.24ms  on-device=6/10 cloud=4/10
+  medium   avg F1=0.80  avg time=1310.39ms  on-device=3/10 cloud=7/10
+  hard     avg F1=0.97  avg time=743.76ms  on-device=0/10 cloud=10/10
+  overall  avg F1=0.89  avg time=1013.13ms  total time=30393.85ms
+           on-device=9/30 (30%)  cloud=21/30 (70%)
+
+==================================================
+  TOTAL SCORE: 74.4%
+==================================================

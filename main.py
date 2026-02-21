@@ -5,12 +5,13 @@ functiongemma_path = "cactus/weights/functiongemma-270m-it"
 
 import json
 import os
+import re
 import time
 
 from google import genai
 from google.genai import types
 
-from cactus import cactus_complete, cactus_destroy, cactus_init
+from cactus import cactus_complete, cactus_init, cactus_reset
 
 _cactus_model = None
 
@@ -25,6 +26,7 @@ def _get_cactus_model():
 def generate_cactus(messages, tools):
     """Run function calling on-device via FunctionGemma + Cactus."""
     model = _get_cactus_model()
+    cactus_reset(model)
 
     cactus_tools = [
         {
@@ -88,6 +90,8 @@ def generate_cactus(messages, tools):
         tools=cactus_tools,
         force_tools=True,
         max_tokens=512,
+        temperature=0.1,
+        confidence_threshold=0.3,
         stop_sequences=["<|im_end|>", "<end_of_turn>"],
     )
 
@@ -98,12 +102,22 @@ def generate_cactus(messages, tools):
             "function_calls": [],
             "total_time_ms": 0,
             "confidence": 0,
+            "cloud_handoff": False,
+        }
+
+    if raw.get("cloud_handoff", False):
+        return {
+            "function_calls": [],
+            "total_time_ms": raw.get("total_time_ms", 0),
+            "confidence": 0,
+            "cloud_handoff": True,
         }
 
     return {
         "function_calls": raw.get("function_calls", []),
         "total_time_ms": raw.get("total_time_ms", 0),
         "confidence": raw.get("confidence", 0),
+        "cloud_handoff": False,
     }
 
 
@@ -190,18 +204,76 @@ def _validate_function_calls(function_calls, tools):
     return True
 
 
-def generate_hybrid(messages, tools, confidence_threshold=0.99):
-    """Baseline hybrid inference strategy; fall back to cloud if Cactus Confidence is below threshold."""
-    local = generate_cactus(messages, tools)
+def _detect_multi_action_request(messages):
+    """
+    Detect obviously multi-action user prompts and route directly to cloud.
+    This reduces latency/overhead on requests that likely need multiple tool calls.
+    """
+    latest_user_text = ""
+    for message in reversed(messages):
+        if message.get("role") == "user" and isinstance(message.get("content"), str):
+            latest_user_text = message["content"].lower()
+            break
 
-    if local["confidence"] >= confidence_threshold and _validate_function_calls(
-        local["function_calls"], tools
+    if not latest_user_text:
+        return False
+
+    connectors = [" and ", " also ", " then ", " plus ", " while ", " as well as "]
+    if not any(connector in latest_user_text for connector in connectors):
+        return False
+
+    action_keywords = [
+        "alarm",
+        "timer",
+        "weather",
+        "message",
+        "remind",
+        "call",
+        "email",
+        "play",
+        "book",
+        "navigate",
+        "set",
+        "check",
+        "send",
+        "create",
+    ]
+    action_count = 0
+    for keyword in action_keywords:
+        if re.search(rf"\b{re.escape(keyword)}\b", latest_user_text):
+            action_count += 1
+            if action_count >= 2:
+                return True
+
+    return False
+
+
+def generate_hybrid(messages, tools, confidence_threshold=0.99):
+    """Hybrid inference: route obvious multi-action prompts to cloud, otherwise fall back as needed."""
+    if _detect_multi_action_request(messages):
+        cloud = generate_cloud(messages, tools)
+        cloud["source"] = "cloud (multi-action heuristic)"
+        cloud["local_confidence"] = 0.0
+        return cloud
+
+    local = generate_cactus(messages, tools)
+    valid_local = _validate_function_calls(local["function_calls"], tools)
+
+    if (
+        not local.get("cloud_handoff", False)
+        and local["confidence"] >= confidence_threshold
+        and valid_local
     ):
         local["source"] = "on-device"
         return local
 
     cloud = generate_cloud(messages, tools)
-    cloud["source"] = "cloud (fallback)"
+    if local.get("cloud_handoff", False):
+        cloud["source"] = "cloud (fallback: local cloud_handoff)"
+    elif not valid_local:
+        cloud["source"] = "cloud (fallback: local validation)"
+    else:
+        cloud["source"] = "cloud (fallback: low confidence)"
     cloud["local_confidence"] = local["confidence"]
     cloud["total_time_ms"] += local["total_time_ms"]
     return cloud
