@@ -12,10 +12,19 @@ from google.genai import types
 
 from cactus import cactus_complete, cactus_destroy, cactus_init
 
+_cactus_model = None
+
+
+def _get_cactus_model():
+    global _cactus_model
+    if _cactus_model is None:
+        _cactus_model = cactus_init(functiongemma_path)
+    return _cactus_model
+
 
 def generate_cactus(messages, tools):
     """Run function calling on-device via FunctionGemma + Cactus."""
-    model = cactus_init(functiongemma_path)
+    model = _get_cactus_model()
 
     cactus_tools = [
         {
@@ -30,7 +39,7 @@ def generate_cactus(messages, tools):
         [
             {
                 "role": "system",
-                "content": """You are a helpful assistant that can use tools by calling functions. For each user request, output a list of function calls in JSON format.
+                "content": """You are a helpful assistant that can use tools by calling functions. For each user request, output a list of function calls in JSON format. If the user asks for multiple actions, output all required function calls in the same list.
 
                 Examples:
 
@@ -50,17 +59,37 @@ def generate_cactus(messages, tools):
                 Function call:
                 [
                 {"name": "send_message", "arguments": {"recipient": "Alice", "message": "good morning"}}
+                ]
+
+                User: Send a message to Bob saying hi and get the weather in London.
+                Function call:
+                [
+                {"name": "send_message", "arguments": {"recipient": "Bob", "message": "hi"}},
+                {"name": "get_weather", "arguments": {"location": "London"}}
+                ]
+
+                User: Set an alarm for 7:30 AM and play jazz music.
+                Function call:
+                [
+                {"name": "set_alarm", "arguments": {"hour": 7, "minute": 30}},
+                {"name": "play_music", "arguments": {"song": "jazz"}}
+                ]
+
+                User: Set a 15 minute timer, remind me to stretch at 4:00 PM, and check the weather in Miami.
+                Function call:
+                [
+                {"name": "set_timer", "arguments": {"minutes": 15}},
+                {"name": "create_reminder", "arguments": {"title": "stretch", "time": "4:00 PM"}},
+                {"name": "get_weather", "arguments": {"location": "Miami"}}
                 ]""",
             }
         ]
         + messages,
         tools=cactus_tools,
         force_tools=True,
-        max_tokens=256,
+        max_tokens=512,
         stop_sequences=["<|im_end|>", "<end_of_turn>"],
     )
-
-    cactus_destroy(model)
 
     try:
         raw = json.loads(raw_str)
@@ -112,7 +141,8 @@ def generate_cloud(messages, tools):
     gemini_response = client.models.generate_content(
         # model="gemini-2.5-flash",
         # model="gemini-3-flash-preview",
-        model="gemini-2.5-flash-lite-preview-09-2025",
+        # model="gemini-2.5-flash-lite-preview-09-2025",
+        model="gemini-2.5-flash-lite",
         contents=contents,
         config=types.GenerateContentConfig(tools=gemini_tools),
     )
@@ -136,11 +166,37 @@ def generate_cloud(messages, tools):
     }
 
 
+def _validate_function_calls(function_calls, tools):
+    """
+    Validate that each predicted function call references a known tool
+    and has all required arguments populated with non-None values.
+    Returns False if any call is missing required args, calls an unknown tool,
+    or if the result is empty.
+    """
+    tool_schema = {t["name"]: t["parameters"].get("required", []) for t in tools}
+
+    if not function_calls:
+        return False
+
+    for call in function_calls:
+        name = call.get("name")
+        args = call.get("arguments", {})
+        if name not in tool_schema:
+            return False
+        for required_arg in tool_schema[name]:
+            if required_arg not in args or args[required_arg] is None:
+                return False
+
+    return True
+
+
 def generate_hybrid(messages, tools, confidence_threshold=0.99):
     """Baseline hybrid inference strategy; fall back to cloud if Cactus Confidence is below threshold."""
     local = generate_cactus(messages, tools)
 
-    if local["confidence"] >= confidence_threshold:
+    if local["confidence"] >= confidence_threshold and _validate_function_calls(
+        local["function_calls"], tools
+    ):
         local["source"] = "on-device"
         return local
 
